@@ -4,6 +4,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -50,18 +52,26 @@ class WebFormTests {
     /**
      * Просто найдем все локаторы на этой странице
      */
+    // Лучше каждый локатор содержать в отдельном тесте, потому что если он сломан, упадёт весь тест
     @Test
     void locatorSearch() {
+        // Best practise - Либо id либо name и тд
+        // Варианты: .display-4 , h1.display-4 , //h1[@class='display-4'] . Лучше h1.display-4
         WebElement actualMainTitle = driver.findElement(By.className("display-4"));
         WebElement actualMainSubtitle = driver.findElement(By.tagName("h5"));
-        WebElement titlePicture = driver.findElement(By.className("img-fluid"));
+        // Варианты: .img-fluid , //img[@class='img-fluid']
+        WebElement titlePicture = driver.findElement(By.className("img-fluid")); // Здесь лучше привязаться не так, а к src. Есть вероятность, что этот класс переиспользуется и там поставят другую картинку (не обязательно искать по полному названию файла)
 
+        // Dividing line: .col.col-12 , //[@class='col col-12')] . Лучше //div[contains(@class, 'col-12')]
         WebElement greyLine = driver.findElement(By.className("my-4"));
 
+        // display-6 , h1.display-6
         WebElement actualPageTitle = driver.findElement(By.className("display-6"));
 
+        // #my-text-id , //[@id='my-text-id']
         WebElement textInputText = driver.findElement(By.cssSelector("form div.col-md-4.py-2:nth-child(1) label:nth-child(1)"));
         WebElement textInputForm = driver.findElement(By.id("my-text-id"));
+        // [name='my-password'] , //[@name='my-password']
         WebElement passwordText = driver.findElement(By.cssSelector("form div.col-md-4.py-2:nth-child(1) label:nth-child(2)"));
         WebElement passwordForm = driver.findElement(By.name("my-password"));
         WebElement textareaText = driver.findElement(By.cssSelector("form div.col-md-4.py-2:nth-child(1) label:nth-child(3)"));
@@ -70,8 +80,10 @@ class WebFormTests {
         WebElement disabledInputForm = driver.findElement(By.name("my-disabled"));
         WebElement readonlyInputText = driver.findElement(By.cssSelector("form div.col-md-4.py-2:nth-child(1) label:nth-child(5)"));
         WebElement readonlyInputForm = driver.findElement(By.name("my-readonly"));
+        // [href='./index.html'] , a[href='./index.html'] , //a[contains(@href, 'index')]
         WebElement returnToIndexUrl = driver.findElement(By.cssSelector("[href$='index.html']"));
 
+        // Функции text() и string: $x("string(//select[@name='my-select']/ancestor::label)") . Попробовать text()[1] . Пример: //@label[@class='form-label w-100' and normalize-space(text()[1])='Date picker']
         WebElement dropdownSelectText = driver.findElement(By.xpath("//select[@name='my-select']/ancestor::label"));
         WebElement dropdownSelectForm = driver.findElement(By.name("my-select"));
         WebElement dropdownDataListText = driver.findElement(By.xpath("//input[@name='my-datalist']/ancestor::label"));
@@ -94,6 +106,12 @@ class WebFormTests {
         WebElement datePickerForm = driver.findElement(By.name("my-date"));
         WebElement exampleRangeText = driver.findElement(By.cssSelector("form div.col-md-4.py-2:nth-child(3) label:nth-child(3)"));
         WebElement exampleRangeForm = driver.findElement(By.name("my-range"));
+
+//        List<WebElement> webFormElements = driver.findElements(By.cssSelector(".form-label.w-100"));
+//        System.out.println(webFormElements.size());
+//        for (WebElement  webFormElement : webFormElements){
+//            System.out.println(webFormElement);
+//        }
 
         WebElement copyrightText = driver.findElement(By.className("text-muted"));
         WebElement bonigarsiaUrl = driver.findElement(By.cssSelector("span.text-muted a"));
@@ -149,5 +167,27 @@ class WebFormTests {
                 () -> assertEquals("Copyright © 2021-2025 Boni García", copyrightText.getText()),
                 () -> assertEquals("Boni García", bonigarsiaUrl.getText())
         );
+    }
+
+    // Пример теста на проверку chapters
+    // Если не работает driver.navigate().back(); то нам нужно новую ссылку открывать не в том же окне, а в новом. Чтобы проверить новую открытую вкладку и закрыть её, а первое главное окно висело без изменений и мы могли к нему возвращаться, а у элементов не менялись id
+    @Test
+    void openAllLinksTest() throws InterruptedException {
+        driver.get("https://bonigarcia.dev/selenium-webdriver-java/");
+        int qtyLinks = 0;
+        List<WebElement> chapters = driver.findElements(By.cssSelector("h5.card-title"));
+        for (WebElement chapter : chapters) {
+            List<WebElement> links = chapter.findElements(By.xpath("./../a"));
+            qtyLinks += links.size();
+            System.out.println(chapter.getText());
+            for (WebElement link : links) {
+                System.out.println(link.getText());
+                link.click();
+//                Thread.sleep(1000);
+                driver.navigate().back();
+            }
+        }
+        assertEquals(6, chapters.size());
+        assertEquals(27, qtyLinks);
     }
 }
